@@ -163,7 +163,7 @@ public class ODistributedStorage implements OStorage {
       // ALREADY DISTRIBUTED
       return wrapped.readRecord(iRecordId, iFetchPlan, iIgnoreCache, iCallback, loadTombstones);
 
-    if (eventuallyConsistent || dManager.isLocalNodeMaster(iRecordId))
+    if (eventuallyConsistent || dManager.isLocalNodeMaster(getName(), null, iRecordId))
       return wrapped.readRecord(iRecordId, iFetchPlan, iIgnoreCache, iCallback, loadTombstones);
 
     try {
@@ -306,7 +306,7 @@ public class ODistributedStorage implements OStorage {
   }
 
   public void commit(final OTransaction iTx) {
-    throw new ODistributedException("Transactions are not supported in distributed environment");
+    wrapped.commit(new ODistributedTransaction(this, iTx));
   }
 
   public void rollback(final OTransaction iTx) {
@@ -466,7 +466,7 @@ public class ODistributedStorage implements OStorage {
     return wrapped.getStatus();
   }
 
-	@Override
+  @Override
   public void checkForClusterPermissions(final String iClusterName) {
     wrapped.checkForClusterPermissions(iClusterName);
   }
@@ -516,5 +516,9 @@ public class ODistributedStorage implements OStorage {
     if (t instanceof OException)
       throw (OException) t;
     throw new OStorageException(String.format(iMessage, iParams), e);
+  }
+
+  public ODistributedServerManager getDistributedManager() {
+    return dManager;
   }
 }
