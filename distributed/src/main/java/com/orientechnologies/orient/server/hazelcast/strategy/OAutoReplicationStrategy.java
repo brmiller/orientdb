@@ -21,21 +21,25 @@ import com.orientechnologies.orient.server.distributed.OReplicationStrategy;
 import com.orientechnologies.orient.server.hazelcast.OHazelcastPlugin;
 
 /**
- * Interface that represents the replication strategy.
+ * Automatic replication strategy: returns the node following the Hazelcast DHT computed on key or cluster name if key is null.
  * 
- * @author luca
+ * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
 public class OAutoReplicationStrategy implements OReplicationStrategy {
   @Override
-  public String getNode(final ODistributedServerManager iManager, final String iClusterName, final Object iKey) {
+  public String getMasterNode(final ODistributedServerManager iManager, final String iClusterName, final Object iKey) {
     final Member member;
-    if (iKey == null)
-      // GET THE LOCAL NODE
-      member = ((OHazelcastPlugin) iManager).getHazelcastInstance().getCluster().getLocalMember();
-    else
+    if (iKey != null)
       // GET THE PARTITION BASED ON THE KEY
       member = ((OHazelcastPlugin) iManager).getHazelcastInstance().getPartitionService().getPartition(iKey).getOwner();
+    else if (iClusterName != null)
+      // GET THE PARTITION BASED ON THE CLUSTER NAME
+      member = ((OHazelcastPlugin) iManager).getHazelcastInstance().getPartitionService().getPartition(iClusterName).getOwner();
+    else
+      // GET THE LOCAL NODE
+      member = ((OHazelcastPlugin) iManager).getHazelcastInstance().getCluster().getLocalMember();
+
     return ((OHazelcastPlugin) iManager).getNodeId(member);
   }
 }

@@ -18,9 +18,9 @@ package com.orientechnologies.orient.server.distributed;
 /**
  * Interface that represents the replication strategy.
  * 
- * @author luca
+ * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  * 
  */
 public interface OReplicationStrategy {
-  String getNode(final ODistributedServerManager iManager, final String iClusterName, final Object iKey);
+  String getMasterNode(final ODistributedServerManager iManager, final String iClusterName, final Object iKey);
 }

@@ -439,48 +439,29 @@ public class OHazelcastPlugin extends ODistributedAbstractPlugin implements Memb
     return localResult;
   }
 
-  public boolean isLocalNodeMaster(final Object iKey) {
-    final Member partitionOwner = hazelcastInstance.getPartitionService().getPartition(iKey).getOwner();
-    final boolean local = partitionOwner.equals(hazelcastInstance.getCluster().getLocalMember());
+  public boolean isLocalNodeMaster(final String iDatabaseName, final String iClusterName, final Object iKey) {
+    final String masterNode = getMasterNode(iDatabaseName, iClusterName, iKey);
+    if (masterNode == null)
+      // NOT ACTIVE, RETURN
+      return true;
 
-    ODistributedServerLog.debug(this, getLocalNodeId(), null, DIRECTION.NONE,
-        "network partition: check for local master: key '%s' is assigned to %s (local=%s)", iKey, getNodeId(partitionOwner), local);
-
-    return local;
+    return masterNode.equals(getLocalNodeId());
   }
 
   /**
-   * Returns the replication data, or null if replication is not active.
+   * Provides the replication data, by providing a set of information such as: db name, cluster name and key. It returns the
+   * replication configuration or null if replication is not active.
    */
   public OReplicationConfig getReplicationData(final String iDatabaseName, final String iClusterName, final Object iKey,
       final String iLocalNodeId, final String iRemoteNodeId) {
 
-    final ODocument cfg = getDatabaseClusterConfiguration(iDatabaseName, iClusterName);
-    final Boolean active = cfg.field("synchronization");
-    if (active == null || !active)
+    final String masterNode = getMasterNode(iDatabaseName, iClusterName, iKey);
+    if (masterNode == null)
       // NOT ACTIVE, RETURN
       return null;
 
     final OReplicationConfig data = new OReplicationConfig();
-    data.masterNode = cfg.field("master");
-    if (data.masterNode == null) {
-      ODistributedServerLog
-          .warn(
-              this,
-              getLocalNodeId(),
-              null,
-              DIRECTION.NONE,
-              "network partition: found wrong configuration for database '%s': cannot find the 'master' field for the cluster '%s'. '$auto' will be used",
-              iDatabaseName, iClusterName);
-      data.masterNode = MASTER_AUTO;
-    }
-
-    if (data.masterNode.startsWith("$"))
-      // GET THE MASTER NODE BY USING THE STRATEGY FACTORY
-      data.masterNode = getReplicationStrategy(data.masterNode).getNode(this, iClusterName, iKey);
-
-    if (data.masterNode == null)
-      throw new ODistributedException("Cannot find a master node for the key '" + iKey + "'");
+    data.masterNode = masterNode;
 
     final boolean local = data.masterNode.equals(getLocalNodeId());
     ODistributedServerLog.debug(this, getLocalNodeId(), "?", DIRECTION.OUT, "master node for %s%s%s -> %s (local=%s)",
@@ -492,6 +473,41 @@ public class OHazelcastPlugin extends ODistributedAbstractPlugin implements Memb
       data.synchReplicas = targetNodes.toArray(new String[targetNodes.size()]);
 
     return data;
+  }
+
+  /**
+   * Provides the master node, by providing a set of information such as: db name, cluster name and key. It returns the master node
+   * as string or null if replication is not active.
+   */
+  public String getMasterNode(final String iDatabaseName, final String iClusterName, final Object iKey) {
+
+    final ODocument cfg = getDatabaseClusterConfiguration(iDatabaseName, iClusterName);
+    final Boolean active = cfg.field("synchronization");
+    if (active == null || !active)
+      // NOT ACTIVE, RETURN
+      return null;
+
+    String masterNode = cfg.field("master");
+    if (masterNode == null) {
+      ODistributedServerLog
+          .warn(
+              this,
+              getLocalNodeId(),
+              null,
+              DIRECTION.NONE,
+              "network partition: found wrong configuration for database '%s': cannot find the 'master' field for the cluster '%s'. '$auto' will be used",
+              iDatabaseName, iClusterName);
+      masterNode = MASTER_AUTO;
+    }
+
+    if (masterNode != null && masterNode.startsWith("$"))
+      // GET THE MASTER NODE BY USING THE STRATEGY FACTORY
+      masterNode = getReplicationStrategy(masterNode).getMasterNode(this, iClusterName, iKey);
+
+    if (masterNode == null)
+      throw new ODistributedException("Cannot find a master node for the key '" + iKey + "'");
+
+    return masterNode;
   }
 
   @Override
@@ -648,10 +664,9 @@ public class OHazelcastPlugin extends ODistributedAbstractPlugin implements Memb
             // AVOID TO SEND THE REQUEST IF THE LOG IS EMPTY
             continue;
 
-          ODistributedServerLog
-              .warn(this, getLocalNodeId(), remoteClusterNodes.keySet().toString(), DIRECTION.OUT,
-                  "sending align request in broadcast for database '%s' from operation %d:%d", databaseName, lastOperationId[0],
-                  lastOperationId[1]);
+          ODistributedServerLog.warn(this, getLocalNodeId(), remoteClusterNodes.keySet().toString(), DIRECTION.OUT,
+              "sending align request in broadcast for database '%s' from operation %d:%d", databaseName, lastOperationId[0],
+              lastOperationId[1]);
 
           synchronized (pendingAlignments) {
             for (String node : remoteClusterNodes.keySet()) {

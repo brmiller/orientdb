@@ -46,7 +46,9 @@ public interface ODistributedServerManager {
 
   public boolean isOfflineNode(String iNodeId);
 
-  public boolean isLocalNodeMaster(Object iKey);
+  public boolean isLocalNodeMaster(String iDatabaseName, String iClusterName, Object iKey);
+
+  public String getMasterNode(String iDatabaseName, String iClusterName, Object iKey);
 
   public OReplicationConfig getReplicationData(String iDatabaseName, String iClusterName, Object iKey, String iSourceNodeId,
       String iDestinationNodeId);
