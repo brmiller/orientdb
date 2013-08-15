@@ -17,14 +17,12 @@ package com.orientechnologies.orient.core.db.record;
 
 import com.orientechnologies.common.log.OLogManager;
 import com.orientechnologies.orient.core.db.ODatabaseListener;
-import com.orientechnologies.orient.core.exception.OTransactionBlockedException;
 import com.orientechnologies.orient.core.exception.OTransactionException;
 import com.orientechnologies.orient.core.id.ORID;
 import com.orientechnologies.orient.core.record.ORecord;
 import com.orientechnologies.orient.core.record.ORecordInternal;
 import com.orientechnologies.orient.core.storage.ORecordCallback;
 import com.orientechnologies.orient.core.tx.OTransaction;
-import com.orientechnologies.orient.core.tx.OTransaction.TXSTATUS;
 import com.orientechnologies.orient.core.tx.OTransaction.TXTYPE;
 import com.orientechnologies.orient.core.tx.OTransactionNoTx;
 import com.orientechnologies.orient.core.tx.OTransactionOptimistic;
@@ -86,7 +84,7 @@ public class ODatabaseRecordTx extends ODatabaseRecordAbstract {
       try {
         listener.onBeforeTxBegin(underlying);
       } catch (Throwable t) {
-        OLogManager.instance().error(this, "Error before the transaction begin", t, OTransactionBlockedException.class);
+        OLogManager.instance().error(this, "Error before the transaction begin", t, OTransactionException.class);
       }
 
     currentTx = iTx;
@@ -107,7 +105,7 @@ public class ODatabaseRecordTx extends ODatabaseRecordAbstract {
         } catch (Exception e) {
         }
         OLogManager.instance().debug(this, "Cannot commit the transaction: caught exception on execution of %s.onBeforeTxCommit()",
-            t, OTransactionBlockedException.class, listener.getClass());
+            t, OTransactionException.class, listener.getClass());
       }
 
     try {
@@ -142,7 +140,7 @@ public class ODatabaseRecordTx extends ODatabaseRecordAbstract {
             .debug(
                 this,
                 "Error after the transaction has been committed. The transaction remains valid. The exception caught was on execution of %s.onAfterTxCommit()",
-                t, OTransactionBlockedException.class, listener.getClass());
+                t, OTransactionException.class, listener.getClass());
       }
 
     return this;
@@ -288,11 +286,6 @@ public class ODatabaseRecordTx extends ODatabaseRecordAbstract {
   }
 
   public void executeRollback(final OTransaction iTransaction) {
-  }
-
-  protected void checkTransaction() {
-    if (currentTx == null || currentTx.getStatus() == TXSTATUS.INVALID)
-      throw new OTransactionException("Transaction not started");
   }
 
   private void init() {
