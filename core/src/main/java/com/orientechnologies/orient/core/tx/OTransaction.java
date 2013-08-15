@@ -107,4 +107,6 @@ public interface OTransaction {
    *          Record identity after commit.
    */
   public void updateIdentityAfterCommit(final ORID oldRid, final ORID newRid);
+
+  public void onBeforeCommitEntry(ORecordOperation txEntry);
 }

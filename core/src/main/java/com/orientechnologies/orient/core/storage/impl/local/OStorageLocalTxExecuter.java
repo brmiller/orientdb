@@ -179,9 +179,12 @@ public class OStorageLocalTxExecuter {
         iTx.clearRecordEntries();
 
         if (!tmpEntries.isEmpty()) {
-          for (ORecordOperation txEntry : tmpEntries)
+          for (ORecordOperation txEntry : tmpEntries) {
             // COMMIT ALL THE SINGLE ENTRIES ONE BY ONE
+            iTx.onBeforeCommitEntry(txEntry);
+
             commitEntry(iTx, txEntry, iTx.isUsingLog());
+          }
         }
       }
 

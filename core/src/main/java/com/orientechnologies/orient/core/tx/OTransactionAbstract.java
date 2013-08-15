@@ -42,6 +42,10 @@ public abstract class OTransactionAbstract implements OTransaction {
     return database;
   }
 
+  @Override
+  public void onBeforeCommitEntry(final ORecordOperation txEntry) {
+  }
+
   public static void updateCacheFromEntries(final OTransaction tx, final Iterable<? extends ORecordOperation> entries,
       final boolean updateStrategy) {
     final OLevel1RecordCache dbCache = tx.getDatabase().getLevel1Cache();
