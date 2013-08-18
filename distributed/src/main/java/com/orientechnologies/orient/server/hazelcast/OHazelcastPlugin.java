@@ -583,6 +583,10 @@ public class OHazelcastPlugin extends ODistributedAbstractPlugin implements Memb
     return nodeCfg;
   }
 
+  public boolean isEnabled() {
+    return enabled;
+  }
+
   public String getStatus() {
     return status;
   }
