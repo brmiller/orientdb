@@ -28,7 +28,6 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.logging.Level;
 
 import javassist.util.proxy.Proxy;
 
@@ -1796,8 +1795,140 @@ public class CRUDObjectPhysicalTest {
     }
   }
 
-  @SuppressWarnings("unchecked")
   @Test(dependsOnMethods = "mapStringObjectTest")
+  public void embeddedMapObjectTest() {
+    database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
+    try {
+      Calendar cal = Calendar.getInstance();
+      cal.set(Calendar.HOUR_OF_DAY, 0);
+      cal.set(Calendar.MINUTE, 0);
+      cal.set(Calendar.SECOND, 0);
+      cal.set(Calendar.MILLISECOND, 0);
+      Map<String, Object> relatives = new HashMap<String, Object>();
+      relatives.put("father", "Mike");
+      relatives.put("mother", "Julia");
+      relatives.put("number", 10);
+      relatives.put("date", cal.getTime());
+
+      // TEST WITH OBJECT DATABASE NEW INSTANCE AND HANDLER MANAGEMENT
+      JavaComplexTestClass p = database.newInstance(JavaComplexTestClass.class);
+      p.setName("Chuck");
+      p.getMapObject().put("father", "Mike");
+      p.getMapObject().put("mother", "Julia");
+      p.getMapObject().put("number", 10);
+      p.getMapObject().put("date", cal.getTime());
+
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), p.getMapObject().get(referenceRelativ));
+      }
+
+      p.getMapObject().keySet().size();
+
+      database.save(p);
+      ORID rid = database.getIdentity(p);
+      database.close();
+      database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
+      JavaComplexTestClass loaded = database.load(rid);
+      Assert.assertNotNull(loaded.getMapObject());
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      loaded.getMapObject().keySet().size();
+      loaded.getMapObject().put("brother", "Nike");
+      relatives.put("brother", "Nike");
+      database.save(loaded);
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      loaded.getMapObject().keySet().size();
+      database.close();
+      database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
+      loaded = database.load(rid);
+      Assert.assertNotNull(loaded.getMapObject());
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      database.delete(loaded);
+
+      // TEST WITH OBJECT DATABASE NEW INSTANCE AND MAP DIRECT SET
+      p = database.newInstance(JavaComplexTestClass.class);
+      p.setName("Chuck");
+      p.setMapObject(relatives);
+
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), p.getMapObject().get(referenceRelativ));
+      }
+
+      database.save(p);
+      p.getMapObject().keySet().size();
+      rid = database.getIdentity(p);
+      database.close();
+      database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
+      loaded = database.load(rid);
+      Assert.assertNotNull(loaded.getMapObject());
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      loaded.getMapObject().keySet().size();
+      loaded.getMapObject().put("brother", "Nike");
+      relatives.put("brother", "Nike");
+      database.save(loaded);
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      loaded.getMapObject().keySet().size();
+      database.close();
+      database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
+      loaded = database.load(rid);
+      Assert.assertNotNull(loaded.getMapObject());
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      loaded.getMapObject().keySet().size();
+      database.delete(loaded);
+
+      // TEST WITH JAVA CONSTRUCTOR
+      p = new JavaComplexTestClass();
+      p.setName("Chuck");
+      p.setMapObject(relatives);
+
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), p.getMapObject().get(referenceRelativ));
+      }
+
+      p = database.save(p);
+      p.getMapObject().keySet().size();
+      rid = database.getIdentity(p);
+      database.close();
+      database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
+      loaded = database.load(rid);
+      Assert.assertNotNull(loaded.getMapObject());
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      loaded.getMapObject().keySet().size();
+      loaded.getMapObject().put("brother", "Nike");
+      relatives.put("brother", "Nike");
+      database.save(loaded);
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      database.close();
+      database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
+      loaded = database.load(rid);
+      loaded.getMapObject().keySet().size();
+      Assert.assertNotNull(loaded.getMapObject());
+      for (String referenceRelativ : relatives.keySet()) {
+        Assert.assertEquals(relatives.get(referenceRelativ), loaded.getMapObject().get(referenceRelativ));
+      }
+      database.delete(loaded);
+    } finally {
+      database.close();
+    }
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test(dependsOnMethods = "embeddedMapObjectTest")
   public void testNoGenericCollections() {
     database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
     try {
@@ -1870,7 +2001,7 @@ public class CRUDObjectPhysicalTest {
   @Test(dependsOnMethods = "testNoGenericCollections")
   public void testNoGenericCollectionsWrongAdding() {
     database = OObjectDatabasePool.global().acquire(url, "admin", "admin");
-    OLogManager.instance().log(this, Level.INFO, "Serialization error test, this will log errors.", null);
+    OLogManager.instance().setErrorEnabled(false);
     try {
       JavaNoGenericCollectionsTestClass p = database.newInstance(JavaNoGenericCollectionsTestClass.class);
       // OBJECT ADDING
@@ -1948,7 +2079,7 @@ public class CRUDObjectPhysicalTest {
           throwedEx = true;
       }
       Assert.assertTrue(throwedEx);
-      OLogManager.instance().log(this, Level.INFO, "Serialization error test ended.", null);
+      OLogManager.instance().setErrorEnabled(true);
     } finally {
       database.close();
     }

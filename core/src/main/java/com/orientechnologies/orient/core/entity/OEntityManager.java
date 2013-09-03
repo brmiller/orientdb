@@ -16,6 +16,7 @@
 package com.orientechnologies.orient.core.entity;
 
 import java.lang.reflect.InvocationTargetException;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -91,6 +92,36 @@ public class OEntityManager {
     classHandler.deregisterEntityClass(iClass);
   }
 
+  public synchronized void deregisterEntityClasses(final String iPackageName) {
+    deregisterEntityClasses(iPackageName, Thread.currentThread().getContextClassLoader());
+  }
+
+  /**
+   * Scans all classes accessible from the context class loader which belong to the given package and subpackages.
+   * 
+   * @param iPackageName
+   *          The base package
+   */
+  public synchronized void deregisterEntityClasses(final String iPackageName, final ClassLoader iClassLoader) {
+    OLogManager.instance().debug(this, "Discovering entity classes inside package: %s", iPackageName);
+
+    List<Class<?>> classes = null;
+    try {
+      classes = OReflectionHelper.getClassesForPackage(iPackageName, iClassLoader);
+    } catch (ClassNotFoundException e) {
+      throw new OException(e);
+    }
+    for (Class<?> c : classes) {
+      deregisterEntityClass(c);
+    }
+
+    if (OLogManager.instance().isDebugEnabled()) {
+      for (Entry<String, Class<?>> entry : classHandler.getClassesEntrySet()) {
+        OLogManager.instance().debug(this, "Unloaded entity class '%s' from: %s", entry.getKey(), entry.getValue());
+      }
+    }
+  }
+
   public synchronized void registerEntityClass(final Class<?> iClass) {
     classHandler.registerEntityClass(iClass);
   }
@@ -147,6 +178,10 @@ public class OEntityManager {
       iClassHandler.registerEntityClass(entry.getValue());
     }
     this.classHandler = iClassHandler;
+  }
+
+  public synchronized Collection<Class<?>> getRegisteredEntities() {
+    return classHandler.getRegisteredEntities();
   }
 
   protected Object createInstance(final Class<?> iClass) throws InstantiationException, IllegalAccessException,

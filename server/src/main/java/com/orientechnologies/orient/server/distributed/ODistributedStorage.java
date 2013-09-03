@@ -46,6 +46,7 @@ import com.orientechnologies.orient.core.storage.ORecordMetadata;
 import com.orientechnologies.orient.core.storage.OStorage;
 import com.orientechnologies.orient.core.storage.OStorageEmbedded;
 import com.orientechnologies.orient.core.storage.OStorageOperationResult;
+import com.orientechnologies.orient.core.storage.impl.local.OFreezableStorage;
 import com.orientechnologies.orient.core.tx.OTransaction;
 import com.orientechnologies.orient.core.version.ORecordVersion;
 import com.orientechnologies.orient.server.OServer;
@@ -61,7 +62,7 @@ import com.orientechnologies.orient.server.distributed.task.OUpdateRecordTask;
  * 
  * @author Luca Garulli (l.garulli--at--orientechnologies.com)
  */
-public class ODistributedStorage implements OStorage {
+public class ODistributedStorage implements OStorage, OFreezableStorage {
   protected final OServer                   serverInstance;
   protected final ODistributedServerManager dManager;
   protected final OStorageEmbedded          wrapped;
@@ -513,12 +514,33 @@ public class ODistributedStorage implements OStorage {
   protected void handleDistributedException(final String iMessage, ExecutionException e, Object... iParams) {
     OLogManager.instance().error(this, iMessage, e, iParams);
     final Throwable t = e.getCause();
-    if (t instanceof OException)
-      throw (OException) t;
+    if (t != null) {
+      if (t instanceof OException)
+        throw (OException) t;
+      else if (t.getCause() instanceof OException)
+        throw (OException) t.getCause();
+    }
     throw new OStorageException(String.format(iMessage, iParams), e);
   }
 
   public ODistributedServerManager getDistributedManager() {
     return dManager;
+  }
+
+  @Override
+  public void freeze(boolean throwException) {
+    getFreezableStorage().freeze(throwException);
+  }
+
+  @Override
+  public void release() {
+    getFreezableStorage().release();
+  }
+
+  private OFreezableStorage getFreezableStorage() {
+    if (wrapped instanceof OFreezableStorage)
+      return ((OFreezableStorage) wrapped);
+    else
+      throw new UnsupportedOperationException("Storage engine " + wrapped.getType() + " does not support freeze operation");
   }
 }
